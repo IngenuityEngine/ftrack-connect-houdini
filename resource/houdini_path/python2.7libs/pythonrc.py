@@ -32,23 +32,26 @@ def setFrameRangeData():
     end_frame = float(os.getenv('FE'))
     shot_id = os.getenv('FTRACK_SHOTID')
     shot = ftrack.Shot(id=shot_id)
-    handles = float(shot.get('handles'))
     fps = shot.get('fps')
+    if 'handles' in shot.keys():
+        handles = float(shot.get('handles'))
+    else:
+        handles = 0.0
 
     print 'setting timeline to %s %s ' % (start_frame, end_frame)
 
     # add handles to start and end frame
-    hsf = start_frame - handles
+    hsf = (start_frame - 1) - handles
     hef = end_frame + handles
 
     hou.setFps(fps)
-    hou.setFrame(hsf)
+    hou.setFrame(start_frame)
 
     try:
         if start_frame != end_frame:
-            hou.hscript("tset {0} {1}".format(hsf / fps,
+            hou.hscript("tset {0} {1}".format((hsf) / fps,
                         hef / fps))
-            hou.playbar.setPlaybackRange(hsf, hef)
+            hou.playbar.setPlaybackRange(start_frame, end_frame)
     except IndexError:
         pass
 

@@ -106,7 +106,7 @@ class HoudiniAction(object):
                 'actionIdentifier': self.identifier,
                 'label': label,
                 'variant': application.get('variant', None),
-                'icon': 'https://drive.google.com/uc?export=download&confirm=no_antivirus&id=0BxXE88V3yaEMdy1IdURJaTdwcFU',
+                'icon': 'https://s15.postimg.org/wrufi6417/houdini.png',
                 'applicationIdentifier': applicationIdentifier
             })
 

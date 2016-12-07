@@ -5,6 +5,7 @@ syntax: glob
 *.egg
 *.egg-info
 dist
+backup
 build
 .eggs/
 eggs

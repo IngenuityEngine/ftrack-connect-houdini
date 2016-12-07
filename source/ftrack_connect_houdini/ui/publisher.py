@@ -172,7 +172,7 @@ class PublishAssetDialog(QtWidgets.QDialog):
             options=options, taskId=taskId
         )
 
-        result, message = self.connector.prePublish(prePubObj)
+        result, message = self.connector.prePublish(prePubObj, assettype)
 
         if not result:
             self.showWarning('Prepublish failed', message)
