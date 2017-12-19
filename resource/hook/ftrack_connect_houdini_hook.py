@@ -6,6 +6,7 @@ import sys
 import pprint
 import logging
 import os
+import re
 
 # RESOURCE_DIRECTORY = os.path.abspath(
 #     os.path.join(os.path.dirname(__file__), '..', 'resource')
@@ -17,6 +18,9 @@ import os
 import ftrack
 import ftrack_connect.application
 import ftrack_connect_houdini
+
+import settingsManager
+globalSettings = settingsManager.globalSettings()
 
 
 class HoudiniAction(object):
@@ -163,6 +167,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
         '''Return a list of applications that can be launched from this host.
         '''
         applications = []
+        versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('HOUDINI')]
 
         if sys.platform == 'darwin':
             prefix = ['/', 'Applications']
@@ -179,6 +184,9 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
         elif 'linux' in sys.platform:
             prefix = ['/', 'opt']
 
+            houdini_version_expression = re.compile(
+                r'(?P<version>{})'.format('|'.join(versions))
+            )
             applications.extend(self._searchFilesystem(
                 expression=prefix + [
                     'hfs*', 'bin', 'houdinifx-bin'
@@ -186,11 +194,15 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
                 label='Houdini',
                 variant='{version}',
                 icon='houdini',
-                applicationIdentifier='houdini_{version}'
+                applicationIdentifier='houdini_{version}',
+                versionExpression=houdini_version_expression
             ))
 
         elif sys.platform == 'win32':
             prefix = ['C:\\', 'Program Files.*']
+            houdini_version_expression = re.compile(
+                r'(?P<version>{})'.format('|'.join(versions))
+            )
 
             applications.extend(self._searchFilesystem(
                 expression=(
@@ -199,7 +211,8 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
                 ),
                 label='Houdini {version}',
                 icon='houdini',
-                applicationIdentifier='houdini_{version}'
+                applicationIdentifier='houdini_{version}',
+                versionExpression=houdini_version_expression
             ))
 
         self.logger.debug(
@@ -233,19 +246,19 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
         entity = context['selection'][0]
         task = ftrack.Task(entity['entityId'])
         taskParent = task.getParent()
-
-        try:
-            environment['FS'] = str(int(taskParent.getFrameStart()))
-        except Exception:
-            environment['FS'] = '1'
-
-        try:
-            environment['FE'] = str(int(taskParent.getFrameEnd()))
-        except Exception:
-            environment['FE'] = '1'
+        frameRange = self.applicationStore.arkFt.getFrameRange(taskParent)
+        environment['FS'] = frameRange.get('start')
+        environment['FE'] = frameRange.get('end')
 
         environment['FTRACK_TASKID'] = task.getId()
         environment['FTRACK_SHOTID'] = task.get('parent_id')
+
+        taskFile = self.applicationStore.arkFt.getHighestOrNewFilename(
+            environment['FTRACK_TASKID'],
+            'hip',
+            'nar'
+        )
+        application['launchArguments'] = [taskFile]
 
         houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
 

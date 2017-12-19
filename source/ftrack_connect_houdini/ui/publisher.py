@@ -37,6 +37,16 @@ class PublishAssetDialog(QtWidgets.QDialog):
         )
         applyTheme(self, 'integration')
 
+#---------------------------------------------------------------------------#
+        # Add for proper hou colors
+        try:
+            import hou
+            self.stylesheet = '%s; background-color: #3a3a3a; color: #FFFFFF;' % hou.qt.styleSheet()
+            self.setStyleSheet(self.stylesheet)
+        except:
+            pass
+#---------------------------------------------------------------------------#
+
         self.assetType = None
         self.assetName = None
         self.status = None
