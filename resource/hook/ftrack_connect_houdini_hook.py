@@ -255,9 +255,8 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
 
 		entity = context['selection'][0]
 		task = self.session.query('Task where id is "{}"'.format(entity['entityId'])).one()
-		taskParent = task.get('parent')
 
-		frameRange = arkFTrack.arkFtrack.getFrameRange(taskParent)
+		frameRange = arkFTrack.arkFtrack.getFrameRange(task.get('parent_id'))
 		environment['FS'] = frameRange.get('start_frame')
 		environment['FE'] = frameRange.get('end_frame')
 
