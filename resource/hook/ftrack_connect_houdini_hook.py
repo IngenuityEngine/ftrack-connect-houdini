@@ -7,7 +7,6 @@ import pprint
 import logging
 import os
 import re
-import traceback
 
 # RESOURCE_DIRECTORY = os.path.abspath(
 #     os.path.join(os.path.dirname(__file__), '..', 'resource')
@@ -256,20 +255,12 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
 		entity = context['selection'][0]
 		task = self.session.query('Task where id is "{}"'.format(entity['entityId'])).one()
 
-		frameRange = arkFTrack.arkFtrack.getFrameRange(task.get('parent_id'))
+		frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
 		environment['FS'] = frameRange.get('start_frame')
 		environment['FE'] = frameRange.get('end_frame')
 
 		environment['FTRACK_TASKID'] = task.get('id')
 		environment['FTRACK_SHOTID'] = task.get('parent_id')
-
-		try:
-			location = self.session.pick_location()
-			taskFile = location.getHighestOrNewFilename(task, extension=self.extension)
-			print 'opening file:', taskFile
-			application['launchArguments'] = [taskFile]
-		except:
-			traceback.print_exc()
 
 		houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
 
