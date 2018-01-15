@@ -172,7 +172,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 		'''Return a list of applications that can be launched from this host.
 		'''
 		applications = []
-		versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('HOUDINI')]
+		versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('HOUDINI').get('version')]
 
 		if sys.platform == 'darwin':
 			prefix = ['/', 'Applications']
