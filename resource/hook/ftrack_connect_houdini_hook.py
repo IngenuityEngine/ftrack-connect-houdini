@@ -15,304 +15,306 @@ import re
 # if RESOURCE_DIRECTORY not in sys.path:
 #     sys.path.append(RESOURCE_DIRECTORY)
 
-import ftrack
+import ftrack_api
 import ftrack_connect.application
 import ftrack_connect_houdini
 
+import arkFTrack
 import settingsManager
 globalSettings = settingsManager.globalSettings()
 
 
 class HoudiniAction(object):
-    '''Launch Houdini action.'''
+	'''Launch Houdini action.'''
 
-    # Unique action identifier.
-    identifier = 'ftrack-connect-launch-houdini'
+	# Unique action identifier.
+	identifier = 'ftrack-connect-launch-houdini'
 
-    def __init__(self, applicationStore, launcher):
-        '''Initialise action with *applicationStore* and *launcher*.
+	def __init__(self, applicationStore, launcher, session):
+		'''Initialise action with *applicationStore* and *launcher*.
 
-        *applicationStore* should be an instance of
-        :class:`ftrack_connect.application.ApplicationStore`.
+		*applicationStore* should be an instance of
+		:class:`ftrack_connect.application.ApplicationStore`.
 
-        *launcher* should be an instance of
-        :class:`ftrack_connect.application.ApplicationLauncher`.
+		*launcher* should be an instance of
+		:class:`ftrack_connect.application.ApplicationLauncher`.
 
-        '''
-        super(HoudiniAction, self).__init__()
+		'''
+		super(HoudiniAction, self).__init__()
 
-        self.logger = logging.getLogger(
-            __name__ + '.' + self.__class__.__name__
-        )
+		self.logger = logging.getLogger(
+			__name__ + '.' + self.__class__.__name__
+		)
 
-        self.applicationStore = applicationStore
-        self.launcher = launcher
+		self.applicationStore = applicationStore
+		self.launcher = launcher
+		self.session = session
 
-        if self.identifier is None:
-            raise ValueError('The action must be given an identifier.')
+		if self.identifier is None:
+			raise ValueError('The action must be given an identifier.')
 
-    def is_valid_selection(self, selection):
-        '''Return true if the selection is valid.'''
-        if (
-            len(selection) != 1 or
-            selection[0]['entityType'] != 'task'
-        ):
-            return False
+	def is_valid_selection(self, selection):
+		'''Return true if the selection is valid.'''
+		if (
+			len(selection) != 1 or
+			selection[0]['entityType'] != 'task'
+		):
+			return False
 
-        entity = selection[0]
-        task = ftrack.Task(entity['entityId'])
+		entity = selection[0]
+		task = self.session.get('Task', entity['entityId'])
 
-        if task.getObjectType() != 'Task':
-            return False
+		if task is None:
+			return False
 
-        return True
+		return True
 
-    def register(self):
-        '''Register action to respond to discover and launch events.'''
-        ftrack.EVENT_HUB.subscribe(
-            'topic=ftrack.action.discover and source.user.username={0}'.format(
-                getpass.getuser()
-            ),
-            self.discover
-        )
+	def register(self):
+		'''Register action to respond to discover and launch events.'''
+		self.session.event_hub.subscribe(
+			'topic=ftrack.action.discover and source.user.username={0}'.format(
+				getpass.getuser()
+			),
+			self.discover,
+			priority=10
+		)
 
-        ftrack.EVENT_HUB.subscribe(
-            'topic=ftrack.action.launch and source.user.username={0} '
-            'and data.actionIdentifier={1}'.format(
-                getpass.getuser(), self.identifier
-            ),
-            self.launch
-        )
+		self.session.event_hub.subscribe(
+			'topic=ftrack.action.launch and source.user.username={0} '
+			'and data.actionIdentifier={1}'.format(
+				getpass.getuser(), self.identifier
+			),
+			self.launch
+		)
 
-        ftrack.EVENT_HUB.subscribe(
-            'topic=ftrack.connect.plugin.debug-information',
-            self.get_version_information
-        )
+		self.session.event_hub.subscribe(
+			'topic=ftrack.connect.plugin.debug-information',
+			self.get_version_information
+		)
 
-    def discover(self, event):
-        '''Return discovered applications.'''
+	def discover(self, event):
+		'''Return discovered applications.'''
 
-        if not self.is_valid_selection(
-            event['data'].get('selection', [])
-        ):
-            return
+		if not self.is_valid_selection(
+			event['data'].get('selection', [])
+		):
+			return
 
-        items = []
-        applications = self.applicationStore.applications
-        applications = sorted(
-            applications, key=lambda application: application['label']
-        )
+		items = []
+		applications = self.applicationStore.applications
+		applications = sorted(
+			applications, key=lambda application: application['label']
+		)
 
-        for application in applications:
-            applicationIdentifier = application['identifier']
-            label = application['label']
-            items.append({
-                'actionIdentifier': self.identifier,
-                'label': label,
-                'variant': application.get('variant', None),
-                'icon': 'https://s15.postimg.org/wrufi6417/houdini.png',
-                'applicationIdentifier': applicationIdentifier
-            })
+		for application in applications:
+			applicationIdentifier = application['identifier']
+			label = application['label']
+			items.append({
+				'actionIdentifier': self.identifier,
+				'label': label,
+				'variant': application.get('variant', None),
+				'icon': 'https://s15.postimg.org/wrufi6417/houdini.png',
+				'applicationIdentifier': applicationIdentifier
+			})
 
-        return {
-            'items': items
-        }
+		return {
+			'items': items
+		}
 
-    def launch(self, event):
-        '''Callback method for Houdini action.'''
-        # applicationIdentifier = (
-        #     event['data']['applicationIdentifier']
-        # )
+	def launch(self, event):
+		'''Callback method for Houdini action.'''
+		# applicationIdentifier = (
+		#     event['data']['applicationIdentifier']
+		# )
 
-        # context = event['data'].copy()
+		# context = event['data'].copy()
 
-        # return self.launcher.launch(
-        #     applicationIdentifier, context
-        # )
-        #########################################
-        event.stop()
+		# return self.launcher.launch(
+		#     applicationIdentifier, context
+		# )
+		#########################################
+		event.stop()
 
-        if not self.is_valid_selection(
-            event['data'].get('selection', [])
-        ):
-            return
+		if not self.is_valid_selection(
+			event['data'].get('selection', [])
+		):
+			return
 
-        application_identifier = (
-            event['data']['applicationIdentifier']
-        )
+		application_identifier = (
+			event['data']['applicationIdentifier']
+		)
 
-        context = event['data'].copy()
-        context['source'] = event['source']
+		context = event['data'].copy()
+		context['source'] = event['source']
 
-        application_identifier = event['data']['applicationIdentifier']
-        context = event['data'].copy()
-        context['source'] = event['source']
+		application_identifier = event['data']['applicationIdentifier']
+		context = event['data'].copy()
+		context['source'] = event['source']
 
-        return self.launcher.launch(
-            application_identifier, context
-        )
+		return self.launcher.launch(
+			application_identifier, context
+		)
 
-    def get_version_information(self, event):
-        '''Return version information.'''
-        return dict(
-            name='ftrack connect houdini',
-            version=ftrack_connect_houdini.__version__
-        )
+	def get_version_information(self, event):
+		'''Return version information.'''
+		return dict(
+			name='ftrack connect houdini',
+			version=ftrack_connect_houdini.__version__
+		)
 
 
 class ApplicationStore(ftrack_connect.application.ApplicationStore):
-    '''Store used to find and keep track of available applications.'''
+	'''Store used to find and keep track of available applications.'''
 
-    def _discoverApplications(self):
-        '''Return a list of applications that can be launched from this host.
-        '''
-        applications = []
-        versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('HOUDINI')]
+	def _discoverApplications(self):
+		'''Return a list of applications that can be launched from this host.
+		'''
+		applications = []
+		versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('HOUDINI').get('version')]
 
-        if sys.platform == 'darwin':
-            prefix = ['/', 'Applications']
+		if sys.platform == 'darwin':
+			prefix = ['/', 'Applications']
 
-            applications.extend(self._searchFilesystem(
-                expression=prefix + [
-                    'Houdini*', 'Houdini.app'
-                ],
-                label='Houdini {version}',
-                icon='houdini',
-                applicationIdentifier='houdini_{version}'
-            ))
+			applications.extend(self._searchFilesystem(
+				expression=prefix + [
+					'Houdini*', 'Houdini.app'
+				],
+				label='Houdini {version}',
+				icon='houdini',
+				applicationIdentifier='houdini_{version}'
+			))
 
-        elif 'linux' in sys.platform:
-            prefix = ['/', 'opt']
+		elif 'linux' in sys.platform:
+			prefix = ['/', 'opt']
 
-            houdini_version_expression = re.compile(
-                r'(?P<version>{})'.format('|'.join(versions))
-            )
-            applications.extend(self._searchFilesystem(
-                expression=prefix + [
-                    'hfs*', 'bin', 'houdinifx-bin'
-                ],
-                label='Houdini',
-                variant='{version}',
-                icon='houdini',
-                applicationIdentifier='houdini_{version}',
-                versionExpression=houdini_version_expression
-            ))
+			houdini_version_expression = re.compile(
+				r'(?P<version>{})'.format('|'.join(versions))
+			)
+			applications.extend(self._searchFilesystem(
+				expression=prefix + [
+					'hfs*', 'bin', 'houdinifx-bin'
+				],
+				label='Houdini',
+				variant='{version}',
+				icon='houdini',
+				applicationIdentifier='houdini_{version}',
+				versionExpression=houdini_version_expression
+			))
 
-        elif sys.platform == 'win32':
-            prefix = ['C:\\', 'Program Files.*']
-            houdini_version_expression = re.compile(
-                r'(?P<version>{})'.format('|'.join(versions))
-            )
+		elif sys.platform == 'win32':
+			prefix = ['C:\\', 'Program Files.*']
+			houdini_version_expression = re.compile(
+				r'(?P<version>{})'.format('|'.join(versions))
+			)
 
-            applications.extend(self._searchFilesystem(
-                expression=(
-                    prefix +
-                    ['Side Effects Software', 'Houdini*', 'bin', 'houdini.exe']
-                ),
-                label='Houdini {version}',
-                icon='houdini',
-                applicationIdentifier='houdini_{version}',
-                versionExpression=houdini_version_expression
-            ))
+			applications.extend(self._searchFilesystem(
+				expression=(
+					prefix +
+					['Side Effects Software', 'Houdini*', 'bin', 'houdini.exe']
+				),
+				label='Houdini {version}',
+				icon='houdini',
+				applicationIdentifier='houdini_{version}',
+				versionExpression=houdini_version_expression
+			))
 
-        self.logger.debug(
-            'Discovered applications:\n{0}'.format(
-                pprint.pformat(applications)
-            )
-        )
+		self.logger.debug(
+			'Discovered applications:\n{0}'.format(
+				pprint.pformat(applications)
+			)
+		)
 
-        return applications
+		return applications
 
 
 class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
-    '''Custom launcher to modify environment before launch.'''
-    def __init__(self, application_store, plugin_path):
-        '''.'''
-        super(ApplicationLauncher, self).__init__(application_store)
+	'''Custom launcher to modify environment before launch.'''
 
-        self.plugin_path = plugin_path
+	def __init__(self, application_store, plugin_path, session):
+		'''.'''
+		super(ApplicationLauncher, self).__init__(application_store)
 
-    def _getApplicationEnvironment(
-        self, application, context=None
-    ):
-        '''Override to modify environment before launch.'''
+		self.plugin_path = plugin_path
+		self.session = session
 
-        # Make sure to call super to retrieve original environment
-        # which contains the selection and ftrack API.
-        environment = super(
-            ApplicationLauncher, self
-        )._getApplicationEnvironment(application, context)
+	def _getApplicationEnvironment(
+		self, application, context=None
+	):
+		'''Override to modify environment before launch.'''
 
-        entity = context['selection'][0]
-        task = ftrack.Task(entity['entityId'])
-        taskParent = task.getParent()
-        frameRange = self.applicationStore.arkFt.getFrameRange(taskParent)
-        environment['FS'] = frameRange.get('start')
-        environment['FE'] = frameRange.get('end')
+		# Make sure to call super to retrieve original environment
+		# which contains the selection and ftrack API.
+		environment = super(
+			ApplicationLauncher, self
+		)._getApplicationEnvironment(application, context)
 
-        environment['FTRACK_TASKID'] = task.getId()
-        environment['FTRACK_SHOTID'] = task.get('parent_id')
+		entity = context['selection'][0]
+		task = self.session.query('Task where id is "{}"'.format(entity['entityId'])).one()
 
-        taskFile = self.applicationStore.arkFt.getHighestOrNewFilename(
-            environment['FTRACK_TASKID'],
-            'hip',
-            'nar'
-        )
-        application['launchArguments'] = [taskFile]
+		frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
+		environment['FS'] = frameRange.get('start_frame')
+		environment['FE'] = frameRange.get('end_frame')
 
-        houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
+		environment['FTRACK_TASKID'] = task.get('id')
+		environment['FTRACK_SHOTID'] = task.get('parent_id')
 
-        # Append or Prepend values to the environment.
-        # Note that if you assign manually you will overwrite any
-        # existing values on that variable.
+		houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
 
-        # Add my custom path to the HOUDINI_SCRIPT_PATH.
-        environment = ftrack_connect.application.appendPath(
-            os.path.pathsep.join([houdini_connect_plugins, '&']),
-            'HOUDINI_PATH',
-            environment
-        )
+		# Append or Prepend values to the environment.
+		# Note that if you assign manually you will overwrite any
+		# existing values on that variable.
 
-        environment = ftrack_connect.application.appendPath(
-            self.plugin_path,
-            'PYTHONPATH',
-            environment
-        )
+		# Add my custom path to the HOUDINI_SCRIPT_PATH.
+		environment = ftrack_connect.application.appendPath(
+			os.path.pathsep.join([houdini_connect_plugins, '&']),
+			'HOUDINI_PATH',
+			environment
+		)
 
-        environment = ftrack_connect.application.appendPath(
-            os.path.join(self.plugin_path, '..', 'resource'),
-            'PYTHONPATH',
-            environment
-        )
-        # Always return the environment at the end.
-        return environment
+		environment = ftrack_connect.application.appendPath(
+			self.plugin_path,
+			'PYTHONPATH',
+			environment
+		)
+
+		environment = ftrack_connect.application.appendPath(
+			os.path.join(self.plugin_path, '..', 'resource'),
+			'PYTHONPATH',
+			environment
+		)
+		# Always return the environment at the end.
+		return environment
 
 
-def register(registry, **kw):
-    '''Register hooks.'''
+def register(session, **kw):
+	'''Register hooks.'''
 
-    # Validate that registry is the correct ftrack.Registry. If not,
-    # assume that register is being called with another purpose or from a
-    # new or incompatible API and return without doing anything.
-    if registry is not ftrack.EVENT_HANDLERS:
-        # Exit to avoid registering this plugin again.
-        return
+	logger = logging.getLogger(
+		'ftrack_plugin:ftrack_connect_houdini_hook.register'
+	)
 
-    # Create store containing applications.
-    application_store = ApplicationStore()
+	# Validate that session is an instance of ftrack_api.Session. If not,
+	# assume that register is being called from an old or incompatible API and
+	# return without doing anything.
+	if not isinstance(session, ftrack_api.session.Session):
+		return
 
-    # Create a launcher with the store containing applications.
-    launcher = ApplicationLauncher(
-        application_store, plugin_path=os.environ.get(
-            'FTRACK_CONNECT_HOUDINI_PLUGINS_PATH',
-            os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__), '..', 'ftrack_connect_houdini'
-                )
-            )
-        )
-    )
+	# Create store containing applications.
+	application_store = ApplicationStore()
 
-    # Create action and register to respond to discover and launch actions.
-    action = HoudiniAction(application_store, launcher)
-    action.register()
+	# Create a launcher with the store containing applications.
+	launcher = ApplicationLauncher(
+		application_store, plugin_path=os.environ.get(
+			'FTRACK_CONNECT_HOUDINI_PLUGINS_PATH',
+			os.path.abspath(
+				os.path.join(
+					os.path.dirname(__file__), '..', 'ftrack_connect_houdini'
+				)
+			)
+		),
+		session=session
+	)
+
+	# Create action and register to respond to discover and launch actions.
+	action = HoudiniAction(application_store, launcher, session)
+	action.register()
