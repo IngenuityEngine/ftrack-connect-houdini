@@ -251,37 +251,38 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
 		entity = context['selection'][0]
 		task = self.session.query('Task where id is "{}"'.format(entity['entityId'])).one()
 
-		frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
-		environment['FS'] = frameRange.get('start_frame')
-		environment['FE'] = frameRange.get('end_frame')
+		# most of the environment setup has been moved to launchTask
+		# frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
+		# environment['FS'] = frameRange.get('start_frame')
+		# environment['FE'] = frameRange.get('end_frame')
 
 		environment['FTRACK_TASKID'] = task.get('id')
 		environment['FTRACK_SHOTID'] = task.get('parent_id')
 
-		houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
+		# houdini_connect_plugins = os.path.join(self.plugin_path, 'houdini_path')
 
-		# Append or Prepend values to the environment.
-		# Note that if you assign manually you will overwrite any
-		# existing values on that variable.
+		# # Append or Prepend values to the environment.
+		# # Note that if you assign manually you will overwrite any
+		# # existing values on that variable.
 
-		# Add my custom path to the HOUDINI_SCRIPT_PATH.
-		environment = ftrack_connect.application.appendPath(
-			os.path.pathsep.join([houdini_connect_plugins, '&']),
-			'HOUDINI_PATH',
-			environment
-		)
+		# # Add my custom path to the HOUDINI_SCRIPT_PATH.
+		# environment = ftrack_connect.application.appendPath(
+		# 	os.path.pathsep.join([houdini_connect_plugins, '&']),
+		# 	'HOUDINI_PATH',
+		# 	environment
+		# )
 
-		environment = ftrack_connect.application.appendPath(
-			self.plugin_path,
-			'PYTHONPATH',
-			environment
-		)
+		# environment = ftrack_connect.application.appendPath(
+		# 	self.plugin_path,
+		# 	'PYTHONPATH',
+		# 	environment
+		# )
 
-		environment = ftrack_connect.application.appendPath(
-			os.path.join(self.plugin_path, '..', 'resource'),
-			'PYTHONPATH',
-			environment
-		)
+		# environment = ftrack_connect.application.appendPath(
+		# 	os.path.join(self.plugin_path, '..', 'resource'),
+		# 	'PYTHONPATH',
+		# 	environment
+		# )
 		# Always return the environment at the end.
 		return environment
 
