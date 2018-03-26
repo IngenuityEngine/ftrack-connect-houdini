@@ -113,7 +113,7 @@ class HoudiniAction(object):
 				'actionIdentifier': self.identifier,
 				'label': label,
 				'variant': application.get('variant', None),
-				'icon': application.get('icon', 'https://s15.postimg.org/wrufi6417/houdini.png'),
+				'icon': 'https://s15.postimg.org/wrufi6417/houdini.png',
 				'applicationIdentifier': applicationIdentifier
 			})
 
